@@ -1,8 +1,9 @@
 ---
-title: "Zeros of Harmonic Functions whose Caustic is a Non-Singular Image of an Epicycloid"
+title: "Using Real-Variable Techniques to Study Zeros of Complex-Valued Harmonic Functions"
 collection: publications
-date: 2025-08-01
-venue: "Preprint (submitted for publication)"
-paperurl: "https://arxiv.org/abs/2508.06724"
-citation: "E. Sampson. <i>Zeros of Harmonic Functions whose Caustic is a Non-Singular Image of an Epicycloid</i>. Preprint, arXiv:2508.06724, 2025."
+date: 2025-06-01
+venue: "Preprint (submitted for publication), 2025"
+paperurl: "https://arxiv.org/abs/2506.14966"
+citation: "J. Brooks, M. Jenkins, S. Liechty, K. Parker, K. Perez, D. Robison, E. Sampson, and M. G. Wilson. <i>Using Real-Variable Techniques to Study Zeros of Complex-Valued Harmonic Functions</i>. arXiv:2506.14966, 2025."
 ---
+We investigate the zeros of two one-parameter families of harmonic functions and describe how the number of zeros depends on the parameter. Our functions have the property that all zeros lie on certain rays in the complex plane and thus we are able to use real-variable techniques to count the zeros on each ray.
