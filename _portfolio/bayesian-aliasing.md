@@ -1,9 +1,9 @@
 ---
 title: "Bayesian Covariance Decomposition"
-excerpt: "Interactive tool for exploring Epistemic and Aleatoric uncertainty in Fourier feature models.<br/><img src='/images/bayes-thumbnail.png'>"
+excerpt: "Interactive tool for exploring Epistemic and Aleatoric uncertainty in Fourier feature models.<br/><img src='/images/bayes_thumbnail.png'>"
 collection: portfolio
 header:
-  teaser: "/images/bayes-thumbnail.png"
+  teaser: "/images/bayes_thumbnail.png"
 ---
 
 This project, developed for CS 677 (Bayesian Methods), derives a decomposition of the posterior covariance for the weights of L2 regularized linear regression. Inspired by Generalized Aliasing (Transtrum et al. 2025), I demonstrate how the posterior covariance is the sum of two distinct components: Data Insufficiency (Epistemic) and Aliasing (Aleatoric) covariance. I explore how these quantities follow proven theoretical behaviors and discuss their potential to improve uncertainty quantification in models like Gaussian Processes and Bayesian Optimization.
