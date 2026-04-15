@@ -1,9 +1,9 @@
 ---
 title: "Bayesian Covariance Decomposition"
-excerpt: "Interactive tool for exploring Epistemic and Aleatoric uncertainty in Fourier feature models.<br/><img src='/images/aliasing-thumb.png'>"
+excerpt: "Interactive tool for exploring Epistemic and Aleatoric uncertainty in Fourier feature models.<br/><img src='/images/bayes-thumbnail.png'>"
 collection: portfolio
 header:
-  teaser: "/images/aliasing-thumb.png"
+  teaser: "/images/bayes-thumbnail.png"
 ---
 
 This project visualizes the **Generalized Aliasing Decomposition (GAD)** within a Bayesian framework. Using a Fourier feature model, I decompose the posterior covariance into two distinct components:
