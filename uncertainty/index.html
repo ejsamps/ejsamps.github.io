@@ -21,7 +21,7 @@
         .header p { color: #4b5563; font-size: 1.1rem; max-width: 800px; margin: 0 auto; line-height: 1.5; }
         .pdf-btn { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 25px; transition: background 0.2s;}
         .pdf-btn:hover { background: #1d4ed8; }
-        #loading { text-align: center; color: #6b7280; font-style: italic; }
+        #loading { text-align: center; color: #6b7280; font-style: italic; margin-top: 50px; }
     </style>
 </head>
 <body>
@@ -29,11 +29,10 @@
     <div class="header">
         <h1>Bayesian Posterior Covariance Decomposition</h1>
         <p>
-            An interactive exploration of <strong>Generalized Aliasing</strong>. 
-            Adjust the sliders to see how uncertainty in L2 Reguarlized Linear Regression shifts from Aliasing Variance to Data Insufficiency Variance
-            as the model capacity ($d$) crosses the interpolation threshold ($n$).
+            Adjust the sliders to see how uncertainty shifts from <strong>Aliasing</strong> to <strong>Data Insufficiency</strong> 
+            as the model features ($d$) cross the interpolation threshold ($n$).
         </p>
-        <a href="../files/your_report.pdf" class="pdf-btn" target="_blank">📄 Read the Mathematical Report</a>
+        <a href="../files/your_report.pdf" class="pdf-btn" target="_blank">📄 Read the Full Project Report</a>
     </div>
 
     <div class="card">
@@ -47,17 +46,17 @@
                 <input type="range" id="n-slider" min="5" max="30" value="15" step="1">
             </div>
             <div class="slider-group">
-                <label>Noise Level (σ²): <span id="sig-val" class="val-display">2.25</span></label>
+                <label>Noise (σ²): <span id="sig-val" class="val-display">2.25</span></label>
                 <input type="range" id="sig-slider" min="0.25" max="5.0" value="2.25" step="0.25">
             </div>
             <div class="slider-group">
-                <label>Prior Variance (τ²): <span id="tau-val" class="val-display">4.0</span></label>
+                <label>Prior (τ²): <span id="tau-val" class="val-display">4.0</span></label>
                 <input type="range" id="tau-slider" min="0.5" max="10.0" value="4.0" step="0.5">
             </div>
         </div>
         
         <div id="plot-container">
-            <div id="loading">Initializing Python environment... (may take a few seconds)</div>
+            <div id="loading">Initial loading of Python environment...</div>
         </div>
     </div>
 
@@ -68,11 +67,9 @@
     <script type="py">
         import numpy as np
         import matplotlib.pyplot as plt
-        # Added 'display' to the import list to fix the NameError
         from pyscript import document, display
         from pyodide.ffi import create_proxy
 
-        # Initial Setup
         total_features = 25
         t_test = np.linspace(0, 1, 200)
 
@@ -87,85 +84,86 @@
         M_all_test = get_fourier_design_matrix(t_test, total_features)
 
         def update_plot(event=None):
-            # 1. Get values from HTML sliders
+            # 1. Get Params
             d = int(document.getElementById('d-slider').value)
             n_train = int(document.getElementById('n-slider').value)
             sigma_sq = float(document.getElementById('sig-slider').value)
             tau_sq = float(document.getElementById('tau-slider').value)
-            
-            sigma = np.sqrt(sigma_sq)
-            tau = np.sqrt(tau_sq)
             lam = sigma_sq / tau_sq
 
-            # Update text labels
             document.getElementById('d-val').innerText = str(d)
             document.getElementById('n-val').innerText = str(n_train)
             document.getElementById('sig-val').innerText = str(sigma_sq)
             document.getElementById('tau-val').innerText = str(tau_sq)
 
-            # 2. Generate Synthetic Data
-            np.random.seed(42) 
+            # 2. Data
+            np.random.seed(42)
             t_train = np.sort(np.random.rand(n_train))
-            theta_true = np.random.normal(0, sigma, total_features)
+            theta_true = np.random.normal(0, np.sqrt(sigma_sq), total_features)
             M_all_train = get_fourier_design_matrix(t_train, total_features)
-            
             y_train = M_all_train @ theta_true
             y_test_true = M_all_test @ theta_true
 
-            # 3. Covariance Decomposition Calculations
+            # 3. Calculations (EXACT SVD LOGIC FROM YOUR CODE)
             M_TM = M_all_train[:, :d]
             M_test_M = M_all_test[:, :d]
 
-            # Bayesian Posterior
             Precision = M_TM.T @ M_TM + lam * np.eye(d)
             Sigma_post = sigma_sq * np.linalg.inv(Precision)
 
             mu_post = np.linalg.inv(Precision) @ M_TM.T @ y_train
             y_pred = M_test_M @ mu_post
 
-            # Decompose via Regularized Mapping (GAD approach)
-            # Sigma_A = Aliasing (Aleatoric)
-            # Sigma_B = Data Insufficiency (Epistemic)
-            Sigma_A = sigma_sq * np.linalg.inv(Precision) @ (M_TM.T @ M_TM) @ np.linalg.inv(Precision)
+            # --- Your Exact SVD Nullspace logic ---
+            U, S, Vh = np.linalg.svd(M_TM)
+            tol = 1e-10
+            null_mask = np.zeros(d, dtype=bool)
+            if d > len(S):
+                null_mask[len(S):] = True
+            null_mask[:len(S)] = S < tol
+
+            V_n = Vh[null_mask, :].T
+            P_N = V_n @ V_n.T
+
+            # Sigma_A = Data Insufficiency (τ² P_N)
+            Sigma_A = tau_sq * P_N
+            # Sigma_B = Aliasing Remainder
             Sigma_B = Sigma_post - Sigma_A
 
             var_total = np.diag(M_test_M @ Sigma_post @ M_test_M.T)
-            var_epistemic = np.diag(M_test_M @ Sigma_B @ M_test_M.T)
-            var_aleatoric = np.diag(M_test_M @ Sigma_A @ M_test_M.T)
+            var_epistemic = np.diag(M_test_M @ Sigma_A @ M_test_M.T)
+            var_aleatoric = np.diag(M_test_M @ Sigma_B @ M_test_M.T)
 
-            # Calculate 95% Confidence Intervals
             cis = [1.96 * np.sqrt(np.maximum(v, 0)) for v in [var_total, var_epistemic, var_aleatoric]]
 
-            # 4. Rendering the Plot
-            plt.clf()
+            # 4. Plot
+            plt.close('all') # Fix for "More than 20 figures" error
             fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
-            titles = ['Total Credible Interval', 'Epistemic (Data Insufficiency)', 'Aleatoric (Aliasing)']
+            titles = ['Total Credible Interval', 
+                      'Data Insufficiency (τ² P_N)', 
+                      'Aliasing (σ² AAᵀ)']
             colors = ['#2ca02c', '#1f77b4', '#d62728']
 
             for i in range(3):
                 ax = axes[i]
-                ax.plot(t_test, y_test_true, 'k--', alpha=0.3, label='True Signal')
-                ax.scatter(t_train, y_train, color='black', s=25, zorder=5, label='Train Data')
-                ax.plot(t_test, y_pred, color=colors[i], lw=2.5, label='MAP Fit')
+                ax.plot(t_test, y_test_true, 'k--', alpha=0.3)
+                ax.scatter(t_train, y_train, color='black', s=25, zorder=5)
+                ax.plot(t_test, y_pred, color=colors[i], lw=2.5)
                 ax.fill_between(t_test, y_pred - cis[i], y_pred + cis[i], color=colors[i], alpha=0.25)
-                ax.set_title(titles[i], fontsize=13, fontweight='bold')
+                ax.set_title(titles[i], fontweight='bold')
                 ax.grid(True, alpha=0.15)
-                ax.set_ylim(-12, 12)
-                if i == 0: ax.legend(prop={'size': 8})
+                ax.set_ylim(y_test_true.min()-5, y_test_true.max()+5)
 
             plt.tight_layout()
-            
-            # Use 'display' to target the HTML div
             display(fig, target="plot-container", append=False)
+            plt.close(fig) # Final memory cleanup
 
-        # 5. Connect UI to Python Logic
-        update_proxy = create_proxy(update_plot)
-        document.getElementById('d-slider').addEventListener('input', update_proxy)
-        document.getElementById('n-slider').addEventListener('input', update_proxy)
-        document.getElementById('sig-slider').addEventListener('input', update_proxy)
-        document.getElementById('tau-slider').addEventListener('input', update_proxy)
+        proxy = create_proxy(update_plot)
+        document.getElementById('d-slider').addEventListener('input', proxy)
+        document.getElementById('n-slider').addEventListener('input', proxy)
+        document.getElementById('sig-slider').addEventListener('input', proxy)
+        document.getElementById('tau-slider').addEventListener('input', proxy)
 
-        # Initial call to render the first plot
         update_plot()
     </script>
 </body>
