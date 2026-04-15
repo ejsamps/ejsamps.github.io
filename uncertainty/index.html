@@ -9,24 +9,31 @@
     
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f9f9f9;}
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .controls { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
-        .slider-group { display: flex; flex-direction: column; flex: 1; min-width: 200px; }
-        label { font-weight: bold; margin-bottom: 5px; color: #333; }
-        input[type=range] { width: 100%; }
-        .val-display { font-weight: normal; color: #0066cc; }
-        #plot-container { width: 100%; overflow-x: auto; display: flex; justify-content: center; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .pdf-btn { display: inline-block; background: #0366d6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px;}
-        .pdf-btn:hover { background: #0052cc; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 20px; border: 1px solid #e5e7eb; }
+        .controls { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 25px; background: #f3f4f6; padding: 20px; border-radius: 8px; }
+        .slider-group { display: flex; flex-direction: column; flex: 1; min-width: 220px; }
+        label { font-weight: 600; margin-bottom: 8px; color: #374151; font-size: 0.9rem; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        .val-display { font-weight: bold; color: #2563eb; float: right; }
+        #plot-container { width: 100%; display: flex; justify-content: center; min-height: 500px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { color: #111827; font-size: 2.25rem; margin-bottom: 10px; }
+        .header p { color: #4b5563; font-size: 1.1rem; max-width: 800px; margin: 0 auto; line-height: 1.5; }
+        .pdf-btn { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 25px; transition: background 0.2s;}
+        .pdf-btn:hover { background: #1d4ed8; }
+        #loading { text-align: center; color: #6b7280; font-style: italic; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h1>Bayesian Posterior Covariance Decomposition</h1>
-        <p>Interact with the sliders to observe how uncertainty shifts from Aleatoric (noise) to Epistemic (data insufficiency) as the model capacity crosses the interpolation threshold.</p>
-        <a href="link_to_your_report.pdf" class="pdf-btn" target="_blank">Read the Full Report (PDF)</a>
+        <p>
+            An interactive exploration of <strong>Generalized Aliasing</strong>. 
+            Adjust the sliders to see how uncertainty shifts from Aliasing to Data Insufficiency 
+            as the model capacity ($d$) crosses the interpolation threshold ($n$).
+        </p>
+        <a href="../files/your_report.pdf" class="pdf-btn" target="_blank">📄 Read the Mathematical Report</a>
     </div>
 
     <div class="card">
@@ -40,16 +47,18 @@
                 <input type="range" id="n-slider" min="5" max="30" value="15" step="1">
             </div>
             <div class="slider-group">
-                <label>Aleatoric Noise (σ²): <span id="sig-val" class="val-display">2.25</span></label>
-                <input type="range" id="sig-slider" min="0.5" max="5.0" value="2.25" step="0.25">
+                <label>Noise Level (σ²): <span id="sig-val" class="val-display">2.25</span></label>
+                <input type="range" id="sig-slider" min="0.25" max="5.0" value="2.25" step="0.25">
             </div>
             <div class="slider-group">
                 <label>Prior Variance (τ²): <span id="tau-val" class="val-display">4.0</span></label>
                 <input type="range" id="tau-slider" min="0.5" max="10.0" value="4.0" step="0.5">
             </div>
         </div>
+        
         <div id="plot-container">
-            </div>
+            <div id="loading">Initializing Python environment... (may take a few seconds)</div>
+        </div>
     </div>
 
     <py-config>
@@ -59,7 +68,8 @@
     <script type="py">
         import numpy as np
         import matplotlib.pyplot as plt
-        from pyscript import document
+        # Added 'display' to the import list to fix the NameError
+        from pyscript import document, display
         from pyodide.ffi import create_proxy
 
         # Initial Setup
@@ -87,14 +97,14 @@
             tau = np.sqrt(tau_sq)
             lam = sigma_sq / tau_sq
 
-            # Update labels
+            # Update text labels
             document.getElementById('d-val').innerText = str(d)
             document.getElementById('n-val').innerText = str(n_train)
             document.getElementById('sig-val').innerText = str(sigma_sq)
             document.getElementById('tau-val').innerText = str(tau_sq)
 
-            # 2. Generate Data
-            np.random.seed(42) # Keep seed fixed so plot doesn't jump randomly
+            # 2. Generate Synthetic Data
+            np.random.seed(42) 
             t_train = np.sort(np.random.rand(n_train))
             theta_true = np.random.normal(0, sigma, total_features)
             M_all_train = get_fourier_design_matrix(t_train, total_features)
@@ -102,27 +112,31 @@
             y_train = M_all_train @ theta_true
             y_test_true = M_all_test @ theta_true
 
-            # 3. Calculations
+            # 3. Covariance Decomposition Calculations
             M_TM = M_all_train[:, :d]
             M_test_M = M_all_test[:, :d]
 
+            # Bayesian Posterior
             Precision = M_TM.T @ M_TM + lam * np.eye(d)
             Sigma_post = sigma_sq * np.linalg.inv(Precision)
 
             mu_post = np.linalg.inv(Precision) @ M_TM.T @ y_train
             y_pred = M_test_M @ mu_post
 
-            # Epistemic/Aleatoric algebraic shortcut (avoids brittle JS SVD)
+            # Decompose via Regularized Mapping (GAD approach)
+            # Sigma_A = Aliasing (Aleatoric)
+            # Sigma_B = Data Insufficiency (Epistemic)
             Sigma_A = sigma_sq * np.linalg.inv(Precision) @ (M_TM.T @ M_TM) @ np.linalg.inv(Precision)
-            Sigma_epistemic = Sigma_post - Sigma_A
+            Sigma_B = Sigma_post - Sigma_A
 
             var_total = np.diag(M_test_M @ Sigma_post @ M_test_M.T)
-            var_epistemic = np.diag(M_test_M @ Sigma_epistemic @ M_test_M.T)
+            var_epistemic = np.diag(M_test_M @ Sigma_B @ M_test_M.T)
             var_aleatoric = np.diag(M_test_M @ Sigma_A @ M_test_M.T)
 
+            # Calculate 95% Confidence Intervals
             cis = [1.96 * np.sqrt(np.maximum(v, 0)) for v in [var_total, var_epistemic, var_aleatoric]]
 
-            # 4. Plotting
+            # 4. Rendering the Plot
             plt.clf()
             fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
             titles = ['Total Credible Interval', 'Epistemic (Data Insufficiency)', 'Aleatoric (Aliasing)']
@@ -130,28 +144,28 @@
 
             for i in range(3):
                 ax = axes[i]
-                ax.plot(t_test, y_test_true, 'k--', alpha=0.4, label='True Signal')
-                ax.scatter(t_train, y_train, color='black', s=30, zorder=5, label='Train')
-                ax.plot(t_test, y_pred, color=colors[i], lw=3, label='MAP')
-                ax.fill_between(t_test, y_pred - cis[i], y_pred + cis[i], color=colors[i], alpha=0.3)
-                ax.set_title(titles[i])
-                ax.grid(True, alpha=0.2)
-                ax.set_ylim(-10, 10)
-                if i == 0: ax.legend()
+                ax.plot(t_test, y_test_true, 'k--', alpha=0.3, label='True Signal')
+                ax.scatter(t_train, y_train, color='black', s=25, zorder=5, label='Train Data')
+                ax.plot(t_test, y_pred, color=colors[i], lw=2.5, label='MAP Fit')
+                ax.fill_between(t_test, y_pred - cis[i], y_pred + cis[i], color=colors[i], alpha=0.25)
+                ax.set_title(titles[i], fontsize=13, fontweight='bold')
+                ax.grid(True, alpha=0.15)
+                ax.set_ylim(-12, 12)
+                if i == 0: ax.legend(prop={'size': 8})
 
             plt.tight_layout()
             
-            # Display plot in HTML
+            # Use 'display' to target the HTML div
             display(fig, target="plot-container", append=False)
 
-        # 5. Bind HTML sliders to the Python update function
+        # 5. Connect UI to Python Logic
         update_proxy = create_proxy(update_plot)
         document.getElementById('d-slider').addEventListener('input', update_proxy)
         document.getElementById('n-slider').addEventListener('input', update_proxy)
         document.getElementById('sig-slider').addEventListener('input', update_proxy)
         document.getElementById('tau-slider').addEventListener('input', update_proxy)
 
-        # Run once on load
+        # Initial call to render the first plot
         update_plot()
     </script>
 </body>
