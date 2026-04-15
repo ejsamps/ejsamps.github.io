@@ -1,7 +1,9 @@
 ---
-title: "Interactive Bayesian Covariance Decomposition"
-excerpt: "An interactive exploration of Generalized Aliasing, showing how uncertainty shifts from aleatoric to epistemic as model capacity crosses the interpolation threshold."
+title: "Bayesian Covariance Decomposition"
+excerpt: "Interactive tool for exploring Epistemic and Aleatoric uncertainty in Fourier feature models.<br/><img src='/images/aliasing-thumb.png'>"
 collection: portfolio
+header:
+  teaser: "/images/aliasing-thumb.png"
 ---
 
 This project visualizes the **Generalized Aliasing Decomposition (GAD)** within a Bayesian framework. Using a Fourier feature model, I decompose the posterior covariance into two distinct components:
