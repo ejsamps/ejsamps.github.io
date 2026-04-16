@@ -1,6 +1,6 @@
 ---
 title: "Bayesian Covariance Decomposition"
-excerpt: "Interactive tool for exploring Epistemic and Aleatoric uncertainty in Fourier feature models.<br/><img src='/images/bayes_thumbnail.png'>"
+excerpt: "Research paper and interactive tool for exploring a decomposition of uncertainty in linear models.<br/><img src='/images/bayes_thumbnail.png'>"
 collection: portfolio
 header:
   teaser: "/images/bayes_thumbnail.png"
